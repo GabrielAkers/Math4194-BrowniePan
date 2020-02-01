@@ -12,6 +12,7 @@ BLACK = (0, 0, 0)
 GREY = (200, 200, 200)
 TRANS = (1, 1, 1)
 ORANGE = (200, 100, 50)
+BLUE = (0, 0, 255)
 
 
 # some predefined polygons for easy testing
@@ -103,7 +104,7 @@ class Shape:
         rectangle.fill((0, 0, 0), rect.inflate(0, -radius.h))
 
         rectangle.fill(color, special_flags=pygame.BLEND_RGBA_MAX)
-        rectangle.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MIN)
+        rectangle.fill((255, 255, 255), special_flags=pygame.BLEND_RGBA_MIN)
 
         return surface.blit(rectangle, pos)
 
@@ -170,13 +171,49 @@ class Slider:
 class Sim:
     def __init__(self):
         self.play = True
+        self.shape_type = 'rr'
+
+        self.diffusing = False
+        self.current_diffuse_time = 0
+        self.max_diffuse_time = 1
+
         self.shape = None
         self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
         self.slides = [self.radius_slider]
 
-    def new_sim(self, shape_type='rr'):
+        for s in self.slides:
+            s.draw()
+        self.draw_text()
+        pygame.display.update()
+
+    def new_sim(self):
         SCREEN.fill(BLACK)
-        self.shape = Shape(SQ, shape_type=shape_type, radius=self.radius_slider.val)
+        self.shape = Shape(SQ, shape_type=self.shape_type, radius=self.radius_slider.val)
+        self.diffusing = True
+        self.current_diffuse_time = 0
+
+    def draw_text(self):
+        # just display the value of the radius
+        txt_surf = font.render(str(self.radius_slider.val), 1, WHITE)
+        txt_rect = txt_surf.get_rect(center=(50, 15))
+        SCREEN.fill(BLACK, pygame.Rect(0, 0, 100, 30))
+        SCREEN.blit(txt_surf, txt_rect)
+
+    def diffuse(self):
+        px_array = self.get_px_array()
+        for x in px_array[100:400]:
+            for y in px_array[100:400]:
+                # print(px_array[x, y])
+                if px_array[x, y] == SCREEN.map_rgb(BLACK):
+                    print("orange")
+                    px_array[x, y] = ORANGE
+
+    def get_px_array(self):
+        px_array = pygame.PixelArray(SCREEN)
+        print('px array got')
+        print(SCREEN.map_rgb(BLACK))
+        print(px_array[100:400, 100:400])
+        return px_array
 
     def run(self):
         while self.play:
@@ -186,8 +223,10 @@ class Sim:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_n:
+                    if event.key == pygame.K_n and not self.diffusing:
                         self.new_sim()
+                    elif event.key == pygame.K_s and self.diffusing:
+                        self.diffusing = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     for s in self.slides:
@@ -197,23 +236,19 @@ class Sim:
                     for s in self.slides:
                         s.hit = False
 
-            for s in self.slides:
-                if s.hit:
-                    s.move()
-
-            for s in self.slides:
-                s.draw()
-
-            # just display the value of the radius
-            txt_surf = font.render(str(self.radius_slider.val), 1, WHITE)
-            txt_rect = txt_surf.get_rect(center=(50, 15))
-            SCREEN.fill(BLACK, pygame.Rect(0, 0, 100, 30))
-            SCREEN.blit(txt_surf, txt_rect)
-
-            if self.shape:
-                print(self.shape.shape)
+            if not self.diffusing:
+                for s in self.slides:
+                    if s.hit:
+                        s.move()
+                for s in self.slides:
+                    s.draw()
+                self.draw_text()
 
             pygame.display.update()
+
+            if self.diffusing and self.current_diffuse_time < self.max_diffuse_time:
+                self.diffuse()
+                self.current_diffuse_time += 1
 
 
 os.chdir(os.path.dirname(__file__))
