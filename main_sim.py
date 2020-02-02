@@ -181,7 +181,7 @@ class Sim:
         self.play = True
         self.shape_type = 'rr'
 
-        self.colors = list(Color("blue").range_to(Color("red"), 60))
+        self.colors = list(Color("blue").range_to(Color("red"), 55))
         print(self.colors)
         self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
         temp = [int(255*i) for j in self.rgb_colors for i in j]
@@ -192,6 +192,7 @@ class Sim:
         self.current_diffuse_time = 0
         self.max_diffuse_time = 50
         self.cleanup = True
+        self.forward = True
 
         self.shape = None
         self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
@@ -231,33 +232,69 @@ class Sim:
                     elif SCREEN.get_at((x, y)) == fake_black or SCREEN.get_at((x, y)) == middle_black:
                         SCREEN.set_at((x, y), BLACK)
         self.cleanup = False
-        for x in range(100, 400):
-            for y in range(100, 400):
-                if SCREEN.get_at((x, y)) == BLACK or SCREEN.get_at((x, y)) in self.rgb_colors:
-                    direction = self.pick_random_direction()
-                    direction = tuple(item1 + item2 for item1, item2 in zip(direction, (x, y)))
-                    direction_color = SCREEN.get_at(direction)
-                    if direction_color == WHITE:
-                        SCREEN.set_at(direction, self.rgb_colors[0])
-                    elif direction_color in self.rgb_colors:
-                        start_index = self.rgb_colors.index(direction_color)
-                        if start_index < len(self.colors)-1:
-                            new = self.rgb_colors[start_index+1]
-                        else:
-                            new = self.rgb_colors[start_index]
-                        SCREEN.set_at(direction, new)
+        if self.forward:
+            for x in range(100, 400):
+                for y in range(100, 400):
+                    if SCREEN.get_at((x, y)) == BLACK or SCREEN.get_at((x, y)) in self.rgb_colors:
+                        direction = self.pick_random_direction()
+                        direction = tuple(item1 + item2 for item1, item2 in zip(direction, (x, y)))
+                        direction_color = SCREEN.get_at(direction)
+                        if direction_color == WHITE:
+                            SCREEN.set_at(direction, self.rgb_colors[0])
+                        elif direction_color in self.rgb_colors:
+                            start_index = self.rgb_colors.index(direction_color)
+                            if start_index < len(self.colors)-1:
+                                new = self.rgb_colors[start_index+1]
+                            else:
+                                new = self.rgb_colors[start_index]
+                            SCREEN.set_at(direction, new)
 
-                    # heat exiting the pan happens here
-                    if SCREEN.get_at((x, y)) in self.rgb_colors and SCREEN.get_at(direction) == BLACK:
-                        ind = self.rgb_colors.index(SCREEN.get_at((x, y)))
-                        if ind >= 1:
-                            SCREEN.set_at((x, y), self.rgb_colors[ind-1])
-                        else:
-                            SCREEN.set_at((x, y), WHITE)
+                        # heat exiting the pan happens here
+                        if SCREEN.get_at((x, y)) in self.rgb_colors and SCREEN.get_at(direction) == BLACK:
+                            ind = self.rgb_colors.index(SCREEN.get_at((x, y)))
+                            if ind >= 1:
+                                SCREEN.set_at((x, y), self.rgb_colors[ind-1])
+                            else:
+                                SCREEN.set_at((x, y), WHITE)
+        else:
+            for x in range(100, 400):
+                for y in range(100, 400):
+                    if SCREEN.get_at((500-x, 500-y)) == BLACK or SCREEN.get_at((500-x, 500-y)) in self.rgb_colors:
+                        direction = self.pick_random_direction()
+                        direction = tuple(item1 + item2 for item1, item2 in zip(direction, (500-x, 500-y)))
+                        direction_color = SCREEN.get_at(direction)
+                        if direction_color == WHITE:
+                            SCREEN.set_at(direction, self.rgb_colors[0])
+                        elif direction_color in self.rgb_colors:
+                            start_index = self.rgb_colors.index(direction_color)
+                            if start_index < len(self.colors) - 1:
+                                new = self.rgb_colors[start_index + 1]
+                            else:
+                                new = self.rgb_colors[start_index]
+                            SCREEN.set_at(direction, new)
+
+                        # heat exiting the pan happens here
+                        if SCREEN.get_at((500-x, 500-y)) in self.rgb_colors and SCREEN.get_at(direction) == BLACK:
+                            ind = self.rgb_colors.index(SCREEN.get_at((500-x, 500-y)))
+                            if ind >= 1:
+                                SCREEN.set_at((500-x, 500-y), self.rgb_colors[ind - 1])
+                            else:
+                                SCREEN.set_at((500-x, 500-y), WHITE)
+        self.forward = not self.forward
 
     def pick_random_direction(self):
         choices = [(0, 1), (0, -1), (1, 0), (-1, 0), (0, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
         return random.choice(choices)
+
+    def gather_data(self):
+        red_dots = 0
+        for x in range(100, 400):
+            for y in range(100, 400):
+                if SCREEN.get_at((x, y)) == RED:
+                    red_dots += 1
+        print('current shape type: ' + self.shape_type)
+        print('num vertices: ' + str(len(self.shape.vertices)))
+        print('num red dots: ' + str(red_dots))
 
     def run(self):
         while self.play:
@@ -271,6 +308,8 @@ class Sim:
                         self.new_sim()
                     elif event.key == pygame.K_s and self.diffusing:
                         self.diffusing = False
+                    elif event.key == pygame.K_g and not self.diffusing:
+                        self.gather_data()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     for s in self.slides:
