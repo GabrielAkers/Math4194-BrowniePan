@@ -203,16 +203,15 @@ class Sim:
         px_array = self.get_px_array()
         for x in px_array[100:400]:
             for y in px_array[100:400]:
-                # print(px_array[x, y])
+                print(px_array[x, y])
                 if px_array[x, y] == SCREEN.map_rgb(BLACK):
                     print("orange")
                     px_array[x, y] = ORANGE
+                    px_array.close()
 
     def get_px_array(self):
         px_array = pygame.PixelArray(SCREEN)
         print('px array got')
-        print(SCREEN.map_rgb(BLACK))
-        print(px_array[100:400, 100:400])
         return px_array
 
     def run(self):
