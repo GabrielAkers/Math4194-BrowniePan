@@ -41,7 +41,24 @@ HEX = [(325, 120),
        (175, 380),
        (325, 380),
        (400, 250)]
-Z = []
+Z = [(125, 125), (375, 125),
+     (375, 170), (140, 170),
+     (140, 185), (375, 185),
+     (375, 230), (140, 230),
+     (140, 245), (375, 245),
+     (375, 290), (140, 290),
+     (140, 305), (375, 305),
+     (375, 350), (140, 350),
+     (140, 365), (375, 365),
+     (375, 380), (125, 380),
+     (125, 335), (360, 335),
+     (360, 320), (125, 320),
+     (125, 275), (360, 275),
+     (360, 260), (125, 260),
+     (125, 215), (360, 215),
+     (360, 200), (125, 200),
+     (125, 155), (360, 155),
+     (360, 140), (125, 140)]
 
 
 class Shape:
@@ -177,11 +194,13 @@ class Slider:
 
 
 class Sim:
-    def __init__(self):
+    def __init__(self, shape_type, shape_coords):
+        self.cook_time = 10
         self.play = True
-        self.shape_type = 'rr'
+        self.shape_type = shape_type
+        self.shape_coords = shape_coords
 
-        self.colors = list(Color("blue").range_to(Color("red"), 55))
+        self.colors = list(Color("blue").range_to(Color("red"), self.cook_time))
         print(self.colors)
         self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
         temp = [int(255*i) for j in self.rgb_colors for i in j]
@@ -190,13 +209,14 @@ class Sim:
         print(self.rgb_colors)
         self.diffusing = False
         self.current_diffuse_time = 0
-        self.max_diffuse_time = 50
+        self.max_diffuse_time = self.cook_time
         self.cleanup = True
         self.forward = True
 
         self.shape = None
         self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
-        self.slides = [self.radius_slider]
+        self.cook_time_slider = Slider("Time", 50, 50, 10, 100)
+        self.slides = [self.radius_slider, self.cook_time_slider]
 
         for s in self.slides:
             s.draw()
@@ -205,14 +225,17 @@ class Sim:
 
     def new_sim(self):
         SCREEN.fill(BLACK)
-        self.shape = Shape(SQ, shape_type=self.shape_type, radius=self.radius_slider.val)
+        if self.shape_type == 'rr':
+            self.shape = Shape(SQ, shape_type=self.shape_type, radius=self.radius_slider.val)
+        elif self.shape_type == 'poly':
+            self.shape = Shape(self.shape_coords, shape_type=self.shape_type, radius=self.radius_slider.val)
         self.diffusing = True
         self.current_diffuse_time = 0
         self.cleanup = True
 
     def draw_text(self):
         # just display the value of the radius
-        txt_surf = font.render(str(self.radius_slider.val), 1, WHITE)
+        txt_surf = font.render(str(self.radius_slider.val) + " :: " + str(self.cook_time_slider.val), 1, WHITE)
         txt_rect = txt_surf.get_rect(center=(50, 15))
         SCREEN.fill(BLACK, pygame.Rect(0, 0, 100, 30))
         SCREEN.blit(txt_surf, txt_rect)
@@ -336,5 +359,5 @@ class Sim:
 
 os.chdir(os.path.dirname(__file__))
 if __name__ == "__main__":
-    sim = Sim()
+    sim = Sim('poly', Z)
     sim.run()
