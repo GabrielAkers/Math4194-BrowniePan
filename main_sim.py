@@ -1,6 +1,8 @@
 import pygame
 import random
 import os
+import colour
+from colour import Color
 
 # run it and then hit n to spawn a new shape
 
@@ -11,7 +13,13 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREY = (200, 200, 200)
 TRANS = (1, 1, 1)
+
+BLUE = (0, 0, 255)
+YELLOW = (0, 122, 122)
+GREEN = (0, 255, 0)
 ORANGE = (200, 100, 50)
+RED = (255, 0, 0)
+
 
 
 # some predefined polygons for easy testing
@@ -33,6 +41,7 @@ HEX = [(325, 120),
        (175, 380),
        (325, 380),
        (400, 250)]
+Z = []
 
 
 class Shape:
@@ -103,7 +112,7 @@ class Shape:
         rectangle.fill((0, 0, 0), rect.inflate(0, -radius.h))
 
         rectangle.fill(color, special_flags=pygame.BLEND_RGBA_MAX)
-        rectangle.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MIN)
+        rectangle.fill((255, 255, 255), special_flags=pygame.BLEND_RGBA_MIN)
 
         return surface.blit(rectangle, pos)
 
@@ -170,13 +179,85 @@ class Slider:
 class Sim:
     def __init__(self):
         self.play = True
+        self.shape_type = 'rr'
+
+        self.colors = list(Color("blue").range_to(Color("red"), 60))
+        print(self.colors)
+        self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
+        temp = [int(255*i) for j in self.rgb_colors for i in j]
+        it = iter(temp)
+        self.rgb_colors = list(zip(it, it, it))
+        print(self.rgb_colors)
+        self.diffusing = False
+        self.current_diffuse_time = 0
+        self.max_diffuse_time = 50
+        self.cleanup = True
+
         self.shape = None
         self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
         self.slides = [self.radius_slider]
 
-    def new_sim(self, shape_type='rr'):
+        for s in self.slides:
+            s.draw()
+        self.draw_text()
+        pygame.display.update()
+
+    def new_sim(self):
         SCREEN.fill(BLACK)
-        self.shape = Shape(SQ, shape_type=shape_type, radius=self.radius_slider.val)
+        self.shape = Shape(SQ, shape_type=self.shape_type, radius=self.radius_slider.val)
+        self.diffusing = True
+        self.current_diffuse_time = 0
+        self.cleanup = True
+
+    def draw_text(self):
+        # just display the value of the radius
+        txt_surf = font.render(str(self.radius_slider.val), 1, WHITE)
+        txt_rect = txt_surf.get_rect(center=(50, 15))
+        SCREEN.fill(BLACK, pygame.Rect(0, 0, 100, 30))
+        SCREEN.blit(txt_surf, txt_rect)
+
+    def diffuse(self):
+        # color correction stuff from the anti-aliasing
+        if self.cleanup:
+            for x in range(100, 400):
+                for y in range(100, 400):
+                    # this is a really bad way to handle this. consider refactoring to define a notion of closeness
+                    fake_white = (252, 252, 252, 255)
+                    other_fake_white = (191, 191, 191, 255)
+                    fake_black = (8, 8, 8, 255)
+                    middle_black = (120, 120, 120, 255)
+                    if SCREEN.get_at((x, y)) == fake_white or SCREEN.get_at((x, y)) == other_fake_white:
+                        SCREEN.set_at((x, y), WHITE)
+                    elif SCREEN.get_at((x, y)) == fake_black or SCREEN.get_at((x, y)) == middle_black:
+                        SCREEN.set_at((x, y), BLACK)
+        self.cleanup = False
+        for x in range(100, 400):
+            for y in range(100, 400):
+                if SCREEN.get_at((x, y)) == BLACK or SCREEN.get_at((x, y)) in self.rgb_colors:
+                    direction = self.pick_random_direction()
+                    direction = tuple(item1 + item2 for item1, item2 in zip(direction, (x, y)))
+                    direction_color = SCREEN.get_at(direction)
+                    if direction_color == WHITE:
+                        SCREEN.set_at(direction, self.rgb_colors[0])
+                    elif direction_color in self.rgb_colors:
+                        start_index = self.rgb_colors.index(direction_color)
+                        if start_index < len(self.colors)-1:
+                            new = self.rgb_colors[start_index+1]
+                        else:
+                            new = self.rgb_colors[start_index]
+                        SCREEN.set_at(direction, new)
+
+                    # heat exiting the pan happens here
+                    if SCREEN.get_at((x, y)) in self.rgb_colors and SCREEN.get_at(direction) == BLACK:
+                        ind = self.rgb_colors.index(SCREEN.get_at((x, y)))
+                        if ind >= 1:
+                            SCREEN.set_at((x, y), self.rgb_colors[ind-1])
+                        else:
+                            SCREEN.set_at((x, y), WHITE)
+
+    def pick_random_direction(self):
+        choices = [(0, 1), (0, -1), (1, 0), (-1, 0), (0, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        return random.choice(choices)
 
     def run(self):
         while self.play:
@@ -186,8 +267,10 @@ class Sim:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_n:
+                    if event.key == pygame.K_n and not self.diffusing:
                         self.new_sim()
+                    elif event.key == pygame.K_s and self.diffusing:
+                        self.diffusing = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
                     for s in self.slides:
@@ -197,23 +280,19 @@ class Sim:
                     for s in self.slides:
                         s.hit = False
 
-            for s in self.slides:
-                if s.hit:
-                    s.move()
-
-            for s in self.slides:
-                s.draw()
-
-            # just display the value of the radius
-            txt_surf = font.render(str(self.radius_slider.val), 1, WHITE)
-            txt_rect = txt_surf.get_rect(center=(50, 15))
-            SCREEN.fill(BLACK, pygame.Rect(0, 0, 100, 30))
-            SCREEN.blit(txt_surf, txt_rect)
-
-            if self.shape:
-                print(self.shape.shape)
+            if not self.diffusing:
+                for s in self.slides:
+                    if s.hit:
+                        s.move()
+                for s in self.slides:
+                    s.draw()
+                self.draw_text()
 
             pygame.display.update()
+
+            if self.diffusing and self.current_diffuse_time < self.max_diffuse_time:
+                self.diffuse()
+                self.current_diffuse_time += 1
 
 
 os.chdir(os.path.dirname(__file__))
