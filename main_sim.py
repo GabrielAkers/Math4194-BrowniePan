@@ -203,7 +203,7 @@ class Sim:
         self.cook_time_slider = Slider("Time", 200, 200, 10, 100)
         self.slides = [self.radius_slider, self.cook_time_slider]
 
-        self.color_grades = 125
+        self.color_grades = 150
         self.colors = list(Color("blue").range_to(Color("red"), self.color_grades))
         print(self.colors)
         self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
