@@ -203,7 +203,7 @@ class Sim:
         self.cook_time_slider = Slider("Time", 200, 200, 10, 100)
         self.slides = [self.radius_slider, self.cook_time_slider]
 
-        self.color_grades = 150
+        self.color_grades = 8
         self.colors = list(Color("blue").range_to(Color("red"), self.color_grades))
         print(self.colors)
         self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
@@ -370,5 +370,5 @@ class Sim:
 
 os.chdir(os.path.dirname(__file__))
 if __name__ == "__main__":
-    sim = Sim('rr', SQ)
+    sim = Sim('poly', Z)
     sim.run()
