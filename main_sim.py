@@ -195,12 +195,16 @@ class Slider:
 
 class Sim:
     def __init__(self, shape_type, shape_coords):
-        self.cook_time = 10
         self.play = True
         self.shape_type = shape_type
         self.shape_coords = shape_coords
 
-        self.colors = list(Color("blue").range_to(Color("red"), self.cook_time))
+        self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
+        self.cook_time_slider = Slider("Time", 200, 200, 10, 100)
+        self.slides = [self.radius_slider, self.cook_time_slider]
+
+        self.color_grades = 125
+        self.colors = list(Color("blue").range_to(Color("red"), self.color_grades))
         print(self.colors)
         self.rgb_colors = [colour.hex2rgb(i.hex) for i in self.colors]
         temp = [int(255*i) for j in self.rgb_colors for i in j]
@@ -209,14 +213,12 @@ class Sim:
         print(self.rgb_colors)
         self.diffusing = False
         self.current_diffuse_time = 0
+        self.cook_time = self.cook_time_slider.val
         self.max_diffuse_time = self.cook_time
         self.cleanup = True
         self.forward = True
 
         self.shape = None
-        self.radius_slider = Slider("Radius", 0.6, 1.0, 0.0, 0)
-        self.cook_time_slider = Slider("Time", 50, 50, 10, 100)
-        self.slides = [self.radius_slider, self.cook_time_slider]
 
         for s in self.slides:
             s.draw()
@@ -241,6 +243,13 @@ class Sim:
         SCREEN.blit(txt_surf, txt_rect)
 
     def diffuse(self):
+        # check middle pixel for doneness
+        middle_pix = (250, 250)
+        temp_increment = (350-75)/self.color_grades
+        final_amount = (160-75)/temp_increment
+        if SCREEN.get_at(middle_pix) in self.rgb_colors and self.rgb_colors.index(SCREEN.get_at(middle_pix)) >= final_amount:
+            self.diffusing = False
+            print('done cooking')
         # color correction stuff from the anti-aliasing
         if self.cleanup:
             for x in range(100, 400):
@@ -318,6 +327,8 @@ class Sim:
         print('current shape type: ' + self.shape_type)
         print('num vertices: ' + str(len(self.shape.vertices)))
         print('num red dots: ' + str(red_dots))
+        print('cook time: ' + str(self.current_diffuse_time))
+        print('area: ' + str(self.shape.area))
 
     def run(self):
         while self.play:
@@ -359,5 +370,5 @@ class Sim:
 
 os.chdir(os.path.dirname(__file__))
 if __name__ == "__main__":
-    sim = Sim('poly', Z)
+    sim = Sim('rr', SQ)
     sim.run()
